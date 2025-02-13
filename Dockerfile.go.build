@@ -1,0 +1,76 @@
+
+ARG BASE_IMAGE=alpine:3.20
+ARG JS_IMAGE=node:22-alpine
+ARG JS_PLATFORM=linux/amd64
+ARG GO_IMAGE=golang:1.23.5-alpine
+
+FROM ${GO_IMAGE} as go-builder
+
+ARG COMMIT_SHA=""
+ARG BUILD_BRANCH=""
+ARG GO_BUILD_TAGS="oss"
+ARG WIRE_TAGS="oss"
+ARG BINGO="true"
+
+RUN if grep -i -q alpine /etc/issue; then \
+      apk add --no-cache \
+          # This is required to allow building on arm64 due to https://github.com/golang/go/issues/22040
+          binutils-gold \
+          bash \
+          # Install build dependencies
+          gcc g++ make git; \
+    fi
+
+WORKDIR /tmp/grafana
+
+COPY go.* ./
+COPY .bingo .bingo
+
+# Include vendored dependencies
+COPY pkg/util/xorm/go.* pkg/util/xorm/
+COPY pkg/apiserver/go.* pkg/apiserver/
+COPY pkg/apimachinery/go.* pkg/apimachinery/
+COPY pkg/build/go.* pkg/build/
+COPY pkg/build/wire/go.* pkg/build/wire/
+COPY pkg/promlib/go.* pkg/promlib/
+COPY pkg/storage/unified/resource/go.* pkg/storage/unified/resource/
+COPY pkg/storage/unified/apistore/go.* pkg/storage/unified/apistore/
+COPY pkg/semconv/go.* pkg/semconv/
+COPY pkg/aggregator/go.* pkg/aggregator/
+COPY apps/playlist/go.* apps/playlist/
+COPY apps/investigation/go.* apps/investigation/
+COPY apps apps
+COPY kindsv2 kindsv2
+COPY apps/alerting/notifications/go.* apps/alerting/notifications/
+COPY pkg/codegen/go.* pkg/codegen/
+COPY pkg/plugins/codegen/go.* pkg/plugins/codegen/
+
+RUN go mod download
+RUN if [[ "$BINGO" = "true" ]]; then \
+      go install github.com/bwplotka/bingo@latest && \
+      bingo get -v -t 0; \
+    fi
+
+COPY embed.go Makefile build.go package.json ./
+COPY cue.mod cue.mod
+COPY kinds kinds
+COPY local local
+COPY packages/grafana-schema packages/grafana-schema
+COPY public/app/plugins public/app/plugins
+COPY public/api-merged.json public/api-merged.json
+COPY pkg pkg
+COPY scripts scripts
+COPY conf conf
+COPY .github .github
+
+ENV COMMIT_SHA=${COMMIT_SHA}
+ENV BUILD_BRANCH=${BUILD_BRANCH}
+
+RUN sed -i 's/"version": "[0-9]*\.[0-9]*\.[0-9]*"/"version": "11.5.1"/g' package.json
+COPY .git .git
+
+RUN make build-go GO_BUILD_TAGS=${GO_BUILD_TAGS} WIRE_TAGS=${WIRE_TAGS}
+
+FROM grafana/grafana:11.5.1-ubuntu
+
+COPY --from=go-builder /tmp/grafana/bin/grafana* /tmp/grafana/bin/*/grafana* /usr/share/grafana/bin/
