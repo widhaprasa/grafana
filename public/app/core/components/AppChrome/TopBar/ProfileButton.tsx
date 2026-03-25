@@ -29,6 +29,14 @@ export function ProfileButton({ profileNode, onToggleKioskMode }: Props) {
     return null;
   }
 
+  let signOutUrl;
+  if (config.bootData.user.isGrafanaAdmin) {
+    signOutUrl = `${config.appSubUrl}/logout`
+  } else {
+    // Non-admin users use OAuth2 sign out
+    signOutUrl = `${config.appSubUrl}/oauth2/sign_out`
+  }
+
   const renderMenu = () => (
     <TopNavBarMenu node={profileNode}>
       <>
@@ -50,7 +58,7 @@ export function ProfileButton({ profileNode, onToggleKioskMode }: Props) {
         <Menu.Divider />
         {!config.auth.disableSignoutMenu && (
           <MenuItem
-            url={`${config.appSubUrl}/logout`}
+            url={signOutUrl}
             label={t('nav.sign-out.title', 'Sign out')}
             icon="arrow-from-right"
             target={'_self'}

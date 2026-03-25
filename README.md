@@ -49,3 +49,14 @@ This project is tested with [BrowserStack](https://www.browserstack.com/).
 ## License
 
 Grafana is distributed under [AGPL-3.0-only](LICENSE). For Apache-2.0 exceptions, see [LICENSING.md](https://github.com/grafana/grafana/blob/HEAD/LICENSING.md).
+
+## ❗ Modification ❗
+
+This version of Grafana has been modified by **widhaprasa** (<widhaprasa@gmail.com>) to support **OAuth2-based login and logout functionality**.
+
+The changes include:
+- Integration with an external OAuth2 provider
+- Custom login and logout handling
+- Minor adjustments to authentication flow
+
+These modifications were made to enhance single sign-on (SSO) support in networked environments.
