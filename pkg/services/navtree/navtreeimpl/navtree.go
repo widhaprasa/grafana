@@ -297,11 +297,20 @@ func (s *ServiceImpl) getProfileNode(c *contextmodel.ReqContext) *navtree.NavLin
 	}
 
 	if !s.cfg.DisableSignoutMenu {
+
+		var signOutUrl string
+		if c.SignedInUser.GetIsGrafanaAdmin() {
+			signOutUrl = s.cfg.AppSubURL + "/logout"
+		} else {
+			// oauth2 sign out url for non-admin users
+			signOutUrl = s.cfg.AppSubURL + "/oauth2/sign_out"
+		}
+
 		// add sign out first
 		children = append(children, &navtree.NavLink{
 			Text:         "Sign out",
 			Id:           "sign-out",
-			Url:          s.cfg.AppSubURL + "/logout",
+			Url:          signOutUrl,
 			Icon:         "arrow-from-right",
 			Target:       "_self",
 			HideFromTabs: true,
